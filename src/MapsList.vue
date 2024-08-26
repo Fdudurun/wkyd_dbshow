@@ -1,7 +1,7 @@
 <template>
     <div id="main">
         <div id="toolbar">
-            任务id:{{ taskstartId }}<br>
+            任务id:{{ taskstartId }}&nbsp小图:<input type="checkbox" v-model="smailMap" /><input type="button" @click="sync_db_filter" value="非bad值同步到远程数据库"/><br>
             <input type="number" v-model="startId" placeholder="开始id"/>
             <input type="number" v-model="taskSize" placeholder="任务数量"/>
             自动获取:<input type="checkbox" v-model="AutoSwitch" />
@@ -36,22 +36,25 @@
 
 <script>
 import axios from 'axios';
+import { watchSyncEffect } from 'vue';
 axios.defaults.baseURL = import.meta.env.VITE_wkyd_Debugger_nodejs_SERVICE_URL;
 export default {
     data() {
         return {
             // 用户任务相关
             // mapList: [{ id: 1, markList: [{ isStartPosition: true, x: 287, y: 360 }, { x: 288, y: 361 }, { x: 9, y: 2 }, { isStartPosition: true, x: 10, y: 10 }, { x: 18, y: 36 }, { x: 99, y: 62 }] }], // 地图列表
-            mapList: [], // 地图列表
+            mapList_origin: [], // 地图列表,原始
+            mapList: [], // 地图列表,转换后
             scorelist: { great: [], good: [], normal: [], bad: [] }, // 评分列表
             mapscoretype: "normal", // 评分类型gread, good, normal, bad
             taskstartId: 1, // 数据库任务开始id
             startId: 1, // 用户可设置的任务开始id
             taskSize: 10, // 任务数量
             AutoSwitch: true, // 自动获取下一组任务
+            smailMap: false, // 小图模式
             // 画板参数相关
-            canvasWidth: 345,//画布宽度
-            canvasHeight: 345,//画布高度
+            canvasWidth: 690,//画布宽度
+            canvasHeight: 690,//画布高度
             OriginSX: 118.766916,//原点经度坐标
             OriginSY: 36.891086,//原点纬度坐标
             OriginEX: 118.781829,//对点经度坐标
@@ -60,6 +63,17 @@ export default {
         }
     },
     computed: {
+        smailMap: {
+            set(value) {
+                if (value) {
+                    this.canvasWidth = 345;
+                    this.canvasHeight = 345;
+                } else {
+                    this.canvasWidth = 690;
+                    this.canvasHeight = 690;
+                }
+            }
+        },
         // 计算属性, 根据评分类型返回背景颜色
         getBackgroundColor() {
             switch (this.mapscoretype) {
@@ -103,14 +117,39 @@ export default {
                 console.log("数组更新", newVal);
                 this.drawMap(newVal);
             },
-            deep: true,
+            deep: true, 
             flush: 'post', // 不管用, DOM更新后执行
         },
+        // 当宽或者高改变时, 重新绘制地图
+        canvasWidth: {
+            handler: function () {
+                this.mapListXY_conv() // 重新计算地图坐标
+                this.drawMap(this.mapList);
+            },
+            deep: false,
+            flush: 'post'
+        },
+        canvasHeight: {
+            handler: function () {
+                this.mapListXY_conv() // 重新计算地图坐标
+                this.drawMap(this.mapList);
+            },
+            deep: false,
+            flush: 'post',
+        }
     },
     methods: {
+        // 将本地数据同步到远程
+        sync_db_filter(){
+            // get /sync_db_filter
+            axios.get('/sync_db_filter').then(res => {
+                console.log(res.data);
+                alert(res.data.msg)
+            });
+        },
         // 计算属性, 设置地图边框颜色
         setmapborder(index) {
-            console.log("设置边框 索引: ", index);
+            // console.log("设置边框 索引: ", index);
             if (!this.mapList[index].mst) {
                 return this.getBackgroundColor;
             } else {
@@ -136,17 +175,33 @@ export default {
         getmapList() {
             this.mapList = [];
             axios.get(`/get_markLists?start=${this.startId}&end=${this.startId + this.taskSize - 1}`).then(res => {
-                // console.log(res.data);
+                // console.log(res.data); // 未来可能会变成流
+                this.mapList_origin = res.data;
                 for (let i = 0; i < res.data.length; i++) {
                     let mapList_obj = res.data[i];
                     let markList = this.mapList_calLtoXY(mapList_obj.data_markList);
                     this.mapList.push({
                         id: mapList_obj.id,
-                        markList: markList
+                        markList: markList,
+                        data_phoneInfo: mapList_obj.data_phoneInfo,
                     });
                 }
                 console.log(this.mapList);
             });
+        },
+        mapListXY_conv(){
+            console.log("重新计算地图坐标");
+            this.mapList = [];
+            // 从原始地图数据转换为不同尺寸的画板坐标
+            for (let i = 0; i < this.mapList_origin.length; i++) {
+                let mapList_obj = this.mapList_origin[i];
+                let markList = this.mapList_calLtoXY(mapList_obj.data_markList);
+                this.mapList.push({
+                    id: mapList_obj.id,
+                    markList: markList,
+                    data_phoneInfo: mapList_obj.data_phoneInfo,
+                });
+            }
         },
         // 地图数据转换_地理转画板
         mapList_calLtoXY(data_markList) {
@@ -186,7 +241,7 @@ export default {
                         scoreList[this.mapscoretype].push(mapList_obj.id);
                 }
             }
-            console.log(scoreList);
+            console.log("提交评分", scoreList);
             // 改成同步提交, 创建变量存放返回的数据
             const response = await axios.post('/updatemanualscore', scoreList)
             const responseData = response.data;
@@ -198,7 +253,7 @@ export default {
                 }
             } else {
                 console.log(responseData);
-                alert("提交失败");
+                alert("提交失败"); 
             }
         },
         // 计算坐标,将地图坐标转换为画板坐标
@@ -211,17 +266,19 @@ export default {
             return ituse;
         },
         drawMap(mapList) {
-            console.log("画图", mapList.length, mapList);
+            console.log("画图", [this.RatioX, this.RatioX], mapList.length, mapList);
             for (let i = 0; i < mapList.length; i++) {
                 let mapList_obj = mapList[i];
+                // console.log("画图分段数据:", mapList_obj);
                 let canvas = document.getElementById('canvas' + mapList_obj.id);
-                console.log('选择: canvas' + mapList_obj.id);
+                // console.log('选择: canvas' + mapList_obj.id);
                 let ctx = canvas.getContext('2d');
                 ctx.strokeStyle = "rgb(74, 105, 189)";
                 ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
                 ctx.font = "20px Arial";
                 ctx.fillText("index: " + (i+1), 10, 20);
                 ctx.fillText("uid: " + mapList_obj.id, 10, 40);
+                ctx.fillText("pohone: " + mapList_obj.data_phoneInfo, 10, 60);
                 ctx.beginPath();
                 for (let j = 0; j < mapList_obj.markList.length; j++) {
                     let mark = mapList_obj.markList[j];
