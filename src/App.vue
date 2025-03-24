@@ -1,9 +1,10 @@
 <template>
     <div id="page">
-        <h4>适用于wsb/n - 潍坊科技学院/山东理工大学的地图筛选器</h4>
-        <select v-model="selectedSchool">
-            <option v-for="(_, key) in schools" :value="key">{{ key }}</option>
-        </select>
+        <div>适用于wsb/n - 
+            <select v-model="selectedSchool">
+                <option v-for="(_, key) in schools" :value="key">{{ key }}</option>
+            </select>
+        的地图筛选器</div>
         <component :is="schoolComponent" />
     </div>
 </template>
@@ -21,6 +22,9 @@ const schoolComponent = computed(() => schools[selectedSchool.value])
 </script>
 
 <style scoped>
+    h4{
+        margin: 10px 0;
+    }
     #page {
         display: flex;
         flex-direction: column;

@@ -8,7 +8,7 @@
             <input type="button" value="更新地图" @click="getmapList" />
             <input type="button" value="提交任务" @click="upscorelist" />
             <div :class="getBackgroundColor">
-                <p>全局,优先级低于地图设置</p>
+                <p class="getBackgroundColorp">全局,优先级低于地图设置</p>
                 <input type="radio" value="great" v-model="mapscoretype">great
                 <input type="radio" value="good" v-model="mapscoretype">good
                 <input type="radio" value="normal" v-model="mapscoretype">normal
@@ -17,7 +17,7 @@
         </div>
         <div id="map">
             <div v-for="(mapList_obj, mapList_index) in mapList" class="map_block" :class="setmapborder(mapList_index)" :width="canvasWidth" :height="canvasHeight" :key="mapList_index">
-                <canvas :id="'canvas' + mapList_obj.id" :width="canvasWidth" :height="canvasHeight" class="mapcanvas"></canvas>
+                <canvas :id="'canvas' + mapList_obj.id" :width="getCanvasWidth(mapList_obj.data_campus)" :height="getCanvasHeight(mapList_obj.data_campus)" class="mapcanvas"></canvas>
                 <div class="colormap">
                     <div class="colormap_sel" :class="`colormap_btn_${mapList_obj.mst}`"></div>
                     <div class="colormap_btn">
@@ -27,7 +27,7 @@
                         <div class="colormap_btn_bad" @click="setmapscoretype('bad', mapList_index)">bad</div>
                     </div>
                 </div>
-                <img src="/sdutmap.png" alt="地图" class="map_img">
+                <img :src="getMapImg(mapList_obj.data_campus)" alt="地图" class="map_img">
             </div>
         </div>
     </div>
@@ -51,28 +51,49 @@ export default {
             AutoSwitch: true, // 自动获取下一组任务
             smailMap: false, // 小图模式
             // 画板参数相关
-            canvasWidth: 500,//画布宽度
-            canvasHeight: 400,//画布高度
+            canvasWidth_A: 625, //画布宽度 主校区
+            canvasHeight_A: 500,//画布高度 主校区
+            canvasWidth_B: 350, //画布宽度 东校区
+            canvasHeight_B: 500,//画布高度 东校区
             // SX → EX + x118
             // SY → EY - y36
-            OriginSX: 117.991931,//原点经度坐标
-            OriginSY: 36.8167640,//原点纬度坐标
-            OriginEX: 118.011287,//对点经度坐标
-            OriginEY: 36.8043940,//对点纬度坐标
-            GeoW: 1250,//地图地理宽度(cm)
+            OriginSX_A: 117.991931,//原点经度坐标 主校区
+            OriginSY_A: 36.8167640,//原点纬度坐标 主校区
+            OriginEX_A: 118.011287,//对点经度坐标 主校区
+            OriginEY_A: 36.8043940,//对点纬度坐标 主校区
+            OriginSX_B: 118.036910,//原点经度坐标 东校区
+            OriginSY_B: 36.8141480,//原点纬度坐标 东校区
+            OriginEX_B: 118.042242,//对点经度坐标 东校区
+            OriginEY_B: 36.8078970,//对点纬度坐标 东校区
+            // 图片
+            sdutmap_A: "/sdutmap_A.png", // 主校区地图
+            sdutmap_B: "/sdutmap_B.png", // 东校区地图
         }
     },
     computed: {
         smailMap: {
             set(value) {
                 if (value) {
-                    this.canvasWidth = 345;
-                    this.canvasHeight = 345;
+                    this.canvasWidth_A/=2;
+                    this.canvasHeight_A/=2;
+                    this.canvasWidth_B/=2;
+                    this.canvasHeight_B/=2;
                 } else {
-                    this.canvasWidth = 690;
-                    this.canvasHeight = 690;
+                    this.canvasWidth_A*=2;
+                    this.canvasHeight_A*=2;
+                    this.canvasWidth_B*=2;
+                    this.canvasHeight_B*=2;
                 }
             }
+        },
+        // 画板尺寸修改
+        canvasDimensions() {
+            return {
+                widthA: this.canvasWidth_A,
+                heightA: this.canvasHeight_A,
+                widthB: this.canvasWidth_B,
+                heightB: this.canvasHeight_B
+            };
         },
         // 计算属性, 根据评分类型返回背景颜色
         getBackgroundColor() {
@@ -90,20 +111,29 @@ export default {
             }
         },
         // 计算属性, 地图相关
-        OriginW() {
-            return this.OriginEX - this.OriginSX; //经度宽度
+        OriginW_A() {
+            return this.OriginEX_A - this.OriginSX_A; //经度宽度
         },
-        OriginH() {
-            return this.OriginEY - this.OriginSY; //纬度高度
+        OriginH_A() {
+            return this.OriginEY_A - this.OriginSY_A; //纬度高度
         },
-        RatioX() {
-            return this.OriginW / this.canvasWidth; //经度比例
+        RatioX_A() {
+            return this.OriginW_A / this.canvasWidth_A; //经度比例
         },
-        RatioY() {
-            return this.OriginH / this.canvasHeight; //纬度比例
+        RatioY_A() {
+            return this.OriginH_A / this.canvasHeight_A; //纬度比例
         },
-        GeoPixel() {
-            return this.GeoW / this.canvasWidth; //地图像素点长度
+        OriginW_B() {
+            return this.OriginEX_B - this.OriginSX_B; //经度宽度
+        },
+        OriginH_B() {
+            return this.OriginEY_B - this.OriginSY_B; //纬度高度
+        },
+        RatioX_B() {
+            return this.OriginW_B / this.canvasWidth_B; //经度比例
+        },
+        RatioY_B() {
+            return this.OriginH_B / this.canvasHeight_B; //纬度比例
         }
     },
     mounted() {
@@ -117,25 +147,13 @@ export default {
                 console.log("数组更新", newVal);
                 this.drawMap(newVal);
             },
-            deep: true, 
-            flush: 'post', // 不管用, DOM更新后执行
+            deep: true, // 深度监听
+            flush: 'post' // 保证能访问DOM
         },
         // 当宽或者高改变时, 重新绘制地图
-        canvasWidth: {
-            handler: function () {
-                this.mapListXY_conv() // 重新计算地图坐标
-                this.drawMap(this.mapList);
-            },
-            deep: false,
-            flush: 'post'
-        },
-        canvasHeight: {
-            handler: function () {
-                this.mapListXY_conv() // 重新计算地图坐标
-                this.drawMap(this.mapList);
-            },
-            deep: false,
-            flush: 'post',
+        canvasDimensions() {
+            this.mapListXY_conv(); // 重新计算地图坐标
+            this.drawMap(this.mapList);
         }
     },
     methods: {
@@ -173,38 +191,31 @@ export default {
         },
         // 获取地图列表
         getmapList() {
-            this.mapList = [];
+            this.mapList = []; // 清空地图列表
             axios.get(`/get_markLists?start=${this.startId}&end=${this.startId + this.taskSize - 1}`).then(res => {
                 // console.log(res.data); // 未来可能会变成流
                 this.mapList_origin = res.data;
-                for (let i = 0; i < res.data.length; i++) {
-                    let mapList_obj = res.data[i];
-                    let markList = this.mapList_calLtoXY(mapList_obj.data_markList);
-                    this.mapList.push({
-                        id: mapList_obj.id,
-                        markList: markList,
-                        data_phoneInfo: mapList_obj.data_phoneInfo,
-                    });
-                }
+                this.mapListXY_conv(); // 重新计算地图坐标
                 console.log(this.mapList);
             });
         },
         mapListXY_conv(){
             console.log("重新计算地图坐标");
-            this.mapList = [];
+            this.mapList = []; // 清空地图列表
             // 从原始地图数据转换为不同尺寸的画板坐标
             for (let i = 0; i < this.mapList_origin.length; i++) {
                 let mapList_obj = this.mapList_origin[i];
-                let markList = this.mapList_calLtoXY(mapList_obj.data_markList);
+                let markList = this.mapList_calLtoXY(mapList_obj.data_markList, mapList_obj.data_campus);
                 this.mapList.push({
                     id: mapList_obj.id,
                     markList: markList,
                     data_phoneInfo: mapList_obj.data_phoneInfo,
+                    data_campus: mapList_obj.data_campus,
                 });
             }
         },
         // 地图数据转换_地理转画板
-        mapList_calLtoXY(data_markList) {
+        mapList_calLtoXY(data_markList, data_campus) {
             // data_markList列表是这样的[{"isStartPosition":true,"latLng":{"latitude":36.884830260641245,"longitude":118.77333133647896}},{"latLng":{"latitude":36.884897009246664,"longitude":118.77312943020856}}...]
             // latitude: 纬度,对应Y坐标 longitude: 经度,对应X坐标
             // 把点传给calLtoXY函数,返回画板坐标
@@ -213,7 +224,7 @@ export default {
             for (let i = 0; i < marks.length; i++) {
                 let mark = marks[i]
                 // console.log(mark);
-                let markXY = this.calLtoXY(mark.latLng.longitude, mark.latLng.latitude)
+                let markXY = this.calLtoXY(mark.latLng.longitude, mark.latLng.latitude, data_campus);
                 if (mark.isStartPosition) {
                     markList.push({ "isStartPosition": true, markXY })
                 } else {
@@ -257,16 +268,15 @@ export default {
             }
         },
         // 计算坐标,将地图坐标转换为画板坐标
-        calLtoXY(x, y) {
+        calLtoXY(longitude, latitude, data_campus) {
             let ituse = {
-                x: (x - this.OriginSX) / this.RatioX,
-                y: (y - this.OriginSY) / this.RatioY
+                x: (longitude - this.getOriginSX(data_campus)) / this.getRatioX(data_campus),
+                y: (latitude - this.getOriginSY(data_campus)) / this.getRatioY(data_campus)
             };
             // console.log("caXYtoL", ituse.x, ituse.y);
             return ituse;
         },
         drawMap(mapList) {
-            console.log("画图", [this.RatioX, this.RatioX], mapList.length, mapList);
             for (let i = 0; i < mapList.length; i++) {
                 let mapList_obj = mapList[i];
                 // console.log("画图分段数据:", mapList_obj);
@@ -274,11 +284,12 @@ export default {
                 // console.log('选择: canvas' + mapList_obj.id);
                 let ctx = canvas.getContext('2d');
                 ctx.strokeStyle = "rgb(74, 105, 189)";
-                ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.font = "20px Arial";
                 ctx.fillText("index: " + (i+1), 10, 20);
                 ctx.fillText("uid: " + mapList_obj.id, 10, 40);
-                ctx.fillText("pohone: " + mapList_obj.data_phoneInfo, 10, 60);
+                ctx.fillText("phone: " + mapList_obj.data_phoneInfo, 10, 60);
+                ctx.fillText("campus: " + mapList_obj.data_campus, 10, 80);
                 ctx.beginPath();
                 for (let j = 0; j < mapList_obj.markList.length; j++) {
                     let mark = mapList_obj.markList[j];
@@ -290,6 +301,46 @@ export default {
                 }
                 ctx.stroke();
             }
+        },
+        campusType(data_campus) { // 将原始校区数据转换成程序内部校区类型
+            return data_campus == 1 ? 1 : 2;
+        },
+        // 获取地图图片
+        getMapImg(data_campus) {
+            console.log("获取地图图片", data_campus);
+            return this.campusType(data_campus) == 1 ? this.sdutmap_A: this.sdutmap_B
+        },
+        // 获取画板宽度
+        getCanvasWidth(data_campus) {
+            return this.campusType(data_campus) == 1 ? this.canvasWidth_A : this.canvasWidth_B;
+        },
+        // 获取画板高度
+        getCanvasHeight(data_campus) {
+            return this.campusType(data_campus) == 1 ? this.canvasHeight_A : this.canvasHeight_B;
+        },
+        // 获取原点经度坐标
+        getOriginSX(data_campus) {
+            return this.campusType(data_campus) == 1 ? this.OriginSX_A : this.OriginSX_B;
+        },
+        // 获取原点纬度坐标
+        getOriginSY(data_campus) {
+            return this.campusType(data_campus) == 1 ? this.OriginSY_A : this.OriginSY_B;
+        },
+        // 获取对点经度坐标
+        getOriginEX(data_campus) {
+            return this.campusType(data_campus) == 1 ? this.OriginEX_A : this.OriginEX_B;
+        },
+        // 获取对点纬度坐标
+        getOriginEY(data_campus) {
+            return this.campusType(data_campus) == 1 ? this.OriginEY_A : this.OriginEY_B;
+        },
+        // 获取经度比例
+        getRatioX(data_campus) {
+            return this.campusType(data_campus) == 1 ? this.RatioX_A : this.RatioX_B;
+        },
+        // 获取纬度比例
+        getRatioY(data_campus) {
+            return this.campusType(data_campus) == 1 ? this.RatioY_A : this.RatioY_B;
         }
     }
 }
@@ -404,5 +455,9 @@ export default {
 .colormap_btn>div {
     display: flex;
     flex-grow: 1;
+}
+
+.getBackgroundColorp{
+    margin: 0;
 }
 </style>

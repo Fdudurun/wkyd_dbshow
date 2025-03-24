@@ -2,7 +2,11 @@
 地图筛选器  
 配合[wkyd Debugger nodejs](https://github.com/xmexg/wdn)使用
 
-![image](./img/img1.png)
+- 潍坊科技学院
+![image](./img/img1.png)  
+
+- 山东理工大学
+![image](./img/img2.png)  
 
 ## Project Setup
 
