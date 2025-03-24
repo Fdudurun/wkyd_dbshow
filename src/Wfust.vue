@@ -1,7 +1,7 @@
 <template>
     <div id="main">
         <div id="toolbar">
-            任务id:{{ taskstartId }}&nbsp小图:<input type="checkbox" v-model="smailMap" /><input type="button" @click="sync_db_filter" value="非bad值同步到远程数据库"/><br>
+            潍坊科技学院 任务id:{{ taskstartId }}&nbsp小图:<input type="checkbox" v-model="smailMap" /><input type="button" @click="sync_db_filter" value="非bad值同步到远程数据库"/><br>
             <input type="number" v-model="startId" placeholder="开始id"/>
             <input type="number" v-model="taskSize" placeholder="任务数量"/>
             自动获取:<input type="checkbox" v-model="AutoSwitch" />
@@ -35,9 +35,8 @@
 </template>
 
 <script>
-import axios from 'axios';
-import { watchSyncEffect } from 'vue';
-axios.defaults.baseURL = import.meta.env.VITE_wkyd_Debugger_nodejs_SERVICE_URL;
+import axios from 'axios'
+axios.defaults.baseURL = import.meta.env.VITE_wkyd_Debugger_nodejs_SERVICE_URL
 export default {
     data() {
         return {
